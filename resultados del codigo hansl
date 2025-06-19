@@ -1,0 +1,162 @@
+versión de Gretl 2025b
+Sesión actual: 2025-06-19 01:01
+
+# === Inicializar muestra simulada ===
+? nulldata 500
+periodicidad: 1, máx. obs: 500
+rango de observaciones: 1 a 500
+? set seed 2025
+Generador de números pseudoaleatorios iniciado con semilla 2025
+# === Generar variables principales ===
+? series ingresos     = normal(2100, 600)
+Se ha generado la serie ingresos (ID 2)
+? series consumo      = ingresos * (0.75 + normal(0, 0.05))
+Se ha generado la serie consumo (ID 3)
+? series deuda        = exp(normal(9.5, 0.4))
+Se ha generado la serie deuda (ID 4)
+? series nmiembros    = ceil(uniform(2, 6))
+Se ha generado la serie nmiembros (ID 5)
+? series edad_jefe    = uniform(25, 65)
+Se ha generado la serie edad_jefe (ID 6)
+# === Nivel educativo (0=primaria, 1=secundaria, 2=superior) ===
+? series u = uniform(0, 1)
+Se ha generado la serie u (ID 7)
+? series educacion = NA
+Se ha generado la serie educacion (ID 8)
+? loop i = 1..$nobs --quiet
+> if u[i] < 0.3
+> educacion[i] = 0
+> elif u[i] < 0.7
+> educacion[i] = 1
+> else
+> educacion[i] = 2
+> endif
+> endloop
+# === Formalidad laboral (1=formal, 0=informal) ===
+? series formalidad = (uniform(0, 1) < 0.45)
+Se ha generado la serie formalidad (ID 9)
+# === Ahorro y tasa de ahorro (%) ===
+? series ahorro       = ingresos - consumo
+Se ha generado la serie ahorro (ID 10)
+? series tasa_ahorro  = 100 * (ahorro / ingresos)
+Se ha generado la serie tasa_ahorro (ID 11)
+# === Conteo por subgrupos ===
+? scalar n_formal   = sum(formalidad)
+Se ha generado el escalar n_formal = 234
+? scalar n_informal = $nobs - n_formal
+Se ha generado el escalar n_informal = 266
+# === Regresión clásica ===
+? ols consumo const ingresos deuda nmiembros formalidad
+
+Modelo 1: MCO, usando las observaciones 1-500
+Variable dependiente: consumo
+
+               coeficiente   Desv. típica  Estadístico t  valor p
+  ---------------------------------------------------------------
+  const       −10.4958       30.4694          −0.3445     0.7306 
+  ingresos      0.756204      0.00839923      90.03       0.0000  ***
+  deuda        −0.000444640   0.000863820     −0.5147     0.6070 
+  nmiembros     1.78100       4.56762          0.3899     0.6968 
+  formalidad   14.9124       10.0855           1.479      0.1399 
+
+Media de la vble. dep.  1596.173   D.T. de la vble. dep.   468.2971
+Suma de cuad. residuos   6263135   D.T. de la regresión    112.4847
+R-cuadrado              0.942767   R-cuadrado corregido    0.942304
+F(4, 495)               2038.456   Valor p (de F)          7.7e-306
+Log-verosimilitud      −3068.365   Criterio de Akaike      6146.730
+Criterio de Schwarz     6167.803   Crit. de Hannan-Quinn   6154.999
+
+Sin considerar la constante, el valor p más alto fue el de la variable 5 (nmiembros)
+
+# === Regresión log-log para elasticidades ===
+? series log_con = log(consumo)
+Se ha generado la serie log_con (ID 12)
+? series log_ing = log(ingresos)
+Se ha generado la serie log_ing (ID 13)
+? ols log_con const log_ing deuda nmiembros formalidad
+
+Modelo 2: MCO, usando las observaciones 1-500
+Variable dependiente: log_con
+
+              coeficiente   Desv. típica  Estadístico t  valor p 
+  ---------------------------------------------------------------
+  const       −0.295914     0.0724958        −4.082      5.21e-05 ***
+  log_ing      1.00014      0.00922709      108.4        0.0000   ***
+  deuda       −1.32881e-07  5.26947e-07      −0.2522     0.8010  
+  nmiembros    0.00214483   0.00278983        0.7688     0.4424  
+  formalidad   0.00878381   0.00615741        1.427      0.1543  
+
+Media de la vble. dep.  7.324737   D.T. de la vble. dep.   0.341430
+Suma de cuad. residuos  2.331746   D.T. de la regresión    0.068634
+R-cuadrado              0.959915   R-cuadrado corregido    0.959591
+F(4, 495)               2963.466   Valor p (de F)          0.000000
+Log-verosimilitud       632.5284   Criterio de Akaike     −1255.057
+Criterio de Schwarz    −1233.984   Crit. de Hannan-Quinn  −1246.788
+
+Log-verosimilitud para consumo = −3029.84
+
+Sin considerar la constante, el valor p más alto fue el de la variable 4 (deuda)
+
+# === Regresión por subgrupos de formalidad ===
+? if n_formal > 30
+? smpl formalidad == 1 --restrict
+Conjunto de datos completo: 500 observaciones
+Muestra actual: 234 observaciones
+? ols consumo const ingresos
+
+Modelo 3: MCO, usando las observaciones 1-234
+Variable dependiente: consumo
+
+             coeficiente   Desv. típica   Estadístico t    valor p 
+  -----------------------------------------------------------------
+  const      −11.5658       29.4819          −0.3923      0.6952   
+  ingresos     0.764537      0.0134724       56.75        5.11e-138 ***
+
+Media de la vble. dep.  1605.190   D.T. de la vble. dep.   446.5570
+Suma de cuad. residuos   3122315   D.T. de la regresión    116.0097
+R-cuadrado              0.932800   R-cuadrado corregido    0.932511
+F(1, 232)               3220.398   Valor p (de F)          5.1e-138
+Log-verosimilitud      −1443.387   Criterio de Akaike      2890.774
+Criterio de Schwarz     2897.685   Crit. de Hannan-Quinn   2893.560
+
+? smpl --full
+Rango de datos completo: 1 - 500 (n = 500)
+
+? endif
+? if n_informal > 30
+? smpl formalidad == 0 --restrict
+Conjunto de datos completo: 500 observaciones
+Muestra actual: 266 observaciones
+? ols consumo const ingresos
+
+Modelo 4: MCO, usando las observaciones 1-266
+Variable dependiente: consumo
+
+             coeficiente   Desv. típica   Estadístico t    valor p 
+  -----------------------------------------------------------------
+  const       4.51071       23.3014           0.1936      0.8467   
+  ingresos    0.749794       0.0105683       70.95        5.96e-174 ***
+
+Media de la vble. dep.  1588.241   D.T. de la vble. dep.   487.3215
+Suma de cuad. residuos   3136213   D.T. de la regresión    108.9936
+R-cuadrado              0.950166   R-cuadrado corregido    0.949977
+F(1, 264)               5033.553   Valor p (de F)          6.0e-174
+Log-verosimilitud      −1624.317   Criterio de Akaike      3252.633
+Criterio de Schwarz     3259.800   Crit. de Hannan-Quinn   3255.513
+
+? smpl --full
+Rango de datos completo: 1 - 500 (n = 500)
+
+? endif
+# === Tasa de ahorro promedio por nivel educativo ===
+? scalar promedio0 = mean(tasa_ahorro, educacion == 0)
+Se ha generado el escalar promedio0 = 24.4802
+? scalar promedio1 = mean(tasa_ahorro, educacion == 1)
+Se ha generado el escalar promedio1 = 24.4802
+? scalar promedio2 = mean(tasa_ahorro, educacion == 2)
+Se ha generado el escalar promedio2 = 24.4802
+
+🎓 Tasa de ahorro promedio por nivel educativo:
+Primaria   (0): 24.48%
+Secundaria (1): 24.48%
+Superior   (2): 24.48%
